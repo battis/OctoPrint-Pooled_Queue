@@ -1,0 +1,43 @@
+#plugin_pooled_queue_dialog .files {
+    display: flex;
+    flex-direction: column;
+    margin: 0.5em 1em;
+}
+
+#plugin_pooled_queue_dialog .files .item {
+    padding: 0.5em;
+    border-radius: 0.25em;
+    border-top: solid 1px #ddd;
+}
+
+#plugin_pooled_queue_dialog .files .item:first-child {
+    border-top: none;
+}
+
+#plugin_pooled_queue_dialog .files .item:hover {
+    background: #ccc;
+}
+
+#plugin_pooled_queue_dialog .item {
+    display: flex;
+    flex-direction: row;
+    gap: 1em;
+}
+
+#plugin_pooled_queue_dialog .hidden {
+    display: none;
+}
+
+#plugin_pooled_queue_dialog .files.loading {
+    height: 6em;
+}
+
+#plugin_pooled_queue_dialog .files.loading p {
+    margin: 0.5em;
+}
+
+#plugin_pooled_queue_dialog .spinner-container {
+    margin: auto;
+    height: 2em;
+    width: 2em;
+}

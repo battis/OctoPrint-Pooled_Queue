@@ -1,13 +1,13 @@
 # coding=utf-8
 
 ########################################################################################################################
-### Do not forget to adjust the following variables to your own plugin.
+# Do not forget to adjust the following variables to your own plugin.
 
 # The plugin's identifier, has to be unique
-plugin_identifier = "pooled-queue"
+plugin_identifier = "pooled_queue"
 
 # The plugin's python package, should be "octoprint_<plugin identifier>", has to be unique
-plugin_package = "octoprint_pooled-queue"
+plugin_package = "octoprint_pooled_queue"
 
 # The plugin's human readable name. Can be overwritten within OctoPrint's internal data via __plugin_name__ in the
 # plugin module
@@ -18,7 +18,7 @@ plugin_version = "0.1.0"
 
 # The plugin's description. Can be overwritten within OctoPrint's internal data via __plugin_description__ in the plugin
 # module
-plugin_description = """TODO"""
+plugin_description = "Pull files to OctoPrint instance from a pooled queue server"
 
 # The plugin's author. Can be overwritten within OctoPrint's internal data via __plugin_author__ in the plugin module
 plugin_author = "Seth Battis"
@@ -35,9 +35,9 @@ plugin_license = "AGPLv3"
 # Any additional requirements besides OctoPrint should be listed here
 plugin_requires = []
 
-### --------------------------------------------------------------------------------------------------------------------
-### More advanced options that you usually shouldn't have to touch follow after this point
-### --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# More advanced options that you usually shouldn't have to touch follow after this point
+# --------------------------------------------------------------------------------------------------------------------
 
 # Additional package data to install for this plugin. The subfolders "templates", "static" and "translations" will
 # already be installed automatically if they exist. Note that if you add something here you'll also need to update
