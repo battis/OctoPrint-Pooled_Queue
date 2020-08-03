@@ -10,17 +10,28 @@ $(function () {
     const PLUGIN_SELECTOR = `#plugin_${PLUGIN_ID}`
     const BINDINGS = {
         [`${PLUGIN_SELECTOR}_button`]: 'button',
+        [`${PLUGIN_SELECTOR}_button_text`]: 'button_text',
         [`${PLUGIN_SELECTOR}_dialog`]: 'dialog',
-        [`${PLUGIN_SELECTOR}_files`]: 'files',
+        [`${PLUGIN_SELECTOR}_instructions`]: 'instructions',
+        [`${PLUGIN_SELECTOR}_files_none`]: 'files_none',
+        [`${PLUGIN_SELECTOR}_files_config`]: 'files_config',
+        [`${PLUGIN_SELECTOR}_files_loading`]: 'files_loading',
+        [`${PLUGIN_SELECTOR}_files_list`]: 'files_list',
         [`${PLUGIN_SELECTOR}_item_template`]: 'item_template'
     };
 
     function PooledQueueViewModel(parameters) {
 
         const self = this;
+
         self.button = undefined;
+        self.button_text = undefined;
         self.dialog = undefined;
-        self.files = undefined;
+        self.instructions = undefined;
+        self.files_none = undefined;
+        self.files_config = undefined;
+        self.files_loading = undefined;
+        self.files_list = undefined;
         self.item_template = undefined;
         self.settings = undefined;
 
@@ -98,7 +109,7 @@ $(function () {
                 }
             }
             node.addEventListener('click', selectItem.bind(self, item))
-            return self.files.appendChild(node);
+            return self.files_list.appendChild(node);
         }
 
         async function applySettings() {
@@ -110,31 +121,38 @@ $(function () {
                     Authorization: `BEARER ${self.settings['queue_token']}`
                 }
             }
+            self.button_text.innerHTML = self.settings['button_text'];
+            self.instructions = self.settings['instructions'];
         }
 
         self.showDialog = async function () {
             for (const node of self.dialog.querySelectorAll('.files')) {
                 node.classList.add('hidden');
             }
-            self.dialog.querySelector('.files.loading').classList.remove('hidden');
+            self.files_loading.classList.remove('hidden');
 
             $(self.dialog).modal('show')
             await applySettings();
-            $.ajax({
-                ...QUEUE_CONFIG,
-                success: files => {
-                    if (files.length === 0) {
-                        self.dialog.querySelector('.files.no-files').classList.remove('hidden');
-                    } else {
-                        self.files.classList.remove('hidden');
+            if (QUEUE_CONFIG.url) {
+                $.ajax({
+                    ...QUEUE_CONFIG,
+                    success: files => {
+                        if (files.length === 0) {
+                            self.files_none.classList.remove('hidden');
+                        } else {
+                            self.files_list.classList.remove('hidden');
+                        }
+                        self.files_loading.classList.add('hidden');
+                        self.files_list.innerHTML = "";
+                        for (const item of files) {
+                            addItem(item);
+                        }
                     }
-                    self.dialog.querySelector('.files.loading').classList.add('hidden');
-                    self.files.innerHTML = "";
-                    for (const item of files) {
-                        addItem(item);
-                    }
-                }
-            })
+                })
+            } else {
+                self.files_config.classList.remove('hidden');
+                self.files_loading.classList.add('hidden');
+            }
         }
 
         /***************************************************************************************************************
@@ -147,6 +165,7 @@ $(function () {
         }
 
         self.onStartupComplete = function () {
+            applySettings();
             self.button.addEventListener('click', self.showDialog.bind(self));
             document.querySelector('.upload-buttons').append(self.button);
         }

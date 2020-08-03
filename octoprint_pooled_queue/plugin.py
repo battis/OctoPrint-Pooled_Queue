@@ -14,6 +14,8 @@ class PooledQueuePlugin(SettingsPlugin,
 	def get_settings_defaults(self):
 		return dict(
 			upload_path="local",
+			button_text="Pooled Queue",
+			instructions="Select a file from the pooled queue to upload to this printer&hellip;",
 			queue_url=None,
 			queue_token=None,
 			queue_id_field="id",

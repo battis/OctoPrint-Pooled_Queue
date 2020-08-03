@@ -1,6 +1,6 @@
 <button id="plugin_pooled_queue_button" class="btn btn-primary">
     <i class="fa fa-upload" aria-hidden="true"></i>
-    Pooled Queue
+    <span id="plugin_pooled_queue_button_text"></span>
 </button>
 
 <div id="plugin_pooled_queue_dialog" class="modal fade" tabindex="-1" role="dialog"
@@ -14,15 +14,21 @@
                 <h3 class="modal-title" id="plugin_pooled_queue_label">{{ _('Upload from Pooled Queue') }}</h3>
             </div>
             <div class="modal-body">
-                <p>Select a file from the pooled queue to upload to this printer&hellip;</p>
-                <p class="files no-files hidden">No files are available.</p>
-                <div class="files loading">
+                <p id="plugin_pooled_queue_instructions">Select a file to upload to OctoPrint&hellip;</p>
+                <div id="plugin_pooled_queue_files_config" class="files alert alert-error hidden">
+                    <h4>Configuration Error</h4>
+                    <p>Please configure queue settings in the Pooled Queue plugin settings.</p>
+                </div>
+                <div id="plugin_pooled_queue_files_none" class="files hidden">
+                    <p>No files are available.</p>
+                </div>
+                <div id="plugin_pooled_queue_files_loading" class="files">
                     <p>Loading queue&hellip;</p>
                     <div class="spinner-container">
                         <i class="fa fa-spinner fa-spin fa-2x"></i>
                     </div>
                 </div>
-                <div id="plugin_pooled_queue_files" class="files list hidden">
+                <div id="plugin_pooled_queue_files_list" class="files hidden">
                 </div>
             </div>
             <div class="modal-footer">

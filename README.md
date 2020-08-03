@@ -1,6 +1,8 @@
 # OctoPrint-PooledQueue
 
-**TODO:** Describe what your plugin does.
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/battis/OctoPrint-Pooled_Queue/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/battis/OctoPrint-Pooled_Queue/?branch=master)
+
+Upload files to OctoPrint from a pooled queue server.
 
 ## Setup
 
