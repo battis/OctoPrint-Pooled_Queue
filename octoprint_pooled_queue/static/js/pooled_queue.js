@@ -10,35 +10,36 @@ $(function () {
     const PLUGIN_SELECTOR = `#plugin_${PLUGIN_ID}`
     const BINDINGS = {
         [`${PLUGIN_SELECTOR}_button`]: 'button',
-        [`${PLUGIN_SELECTOR}_button_text`]: 'button_text',
         [`${PLUGIN_SELECTOR}_dialog`]: 'dialog',
+
+        [`${PLUGIN_SELECTOR}_button_text`]: 'button_text',
+        [`${PLUGIN_SELECTOR}_dialog_title`]: 'dialog_title',
         [`${PLUGIN_SELECTOR}_instructions`]: 'instructions',
+
         [`${PLUGIN_SELECTOR}_files_none`]: 'files_none',
+        [`${PLUGIN_SELECTOR}_files_auth`]: 'files_auth',
         [`${PLUGIN_SELECTOR}_files_config`]: 'files_config',
         [`${PLUGIN_SELECTOR}_files_loading`]: 'files_loading',
         [`${PLUGIN_SELECTOR}_files_list`]: 'files_list',
+
         [`${PLUGIN_SELECTOR}_item_template`]: 'item_template'
     };
 
-    function PooledQueueViewModel(parameters) {
+    function PooledQueueViewModel() {
 
         const self = this;
 
         self.button = undefined;
         self.button_text = undefined;
         self.dialog = undefined;
+        self.dialog_title = undefined;
         self.instructions = undefined;
         self.files_none = undefined;
         self.files_config = undefined;
+        self.files_auth = undefined;
         self.files_loading = undefined;
         self.files_list = undefined;
         self.item_template = undefined;
-        self.settings = undefined;
-
-        const QUEUE_CONFIG = {
-            cache: false,
-            headers: {}
-        }
 
         const API_CONFIG = {}
         if (UI_API_KEY) {
@@ -58,71 +59,66 @@ $(function () {
             }).filter(x => x.length).join('/')
         }
 
-        function selectItem(item) {
+        async function selectItem(item, settings) {
             $(self.dialog).modal('hide');
+
+            let url = settings['url_file'];
+            if (!url) {
+                url = settings['url_list'];
+            }
+            const headers = {};
+            if (settings['access_token']) {
+                headers.Authorization = `Bearer ${settings['access_token']}`;
+            }
+
+            const file = await (await fetch(`${url}/${item.id}`, {
+                method: 'DELETE',
+                headers
+            })).blob();
+            const data = new FormData();
+            data.append('print', settings['upload_print']);
+            data.append('select', settings['upload_select']);
+
+            const userdata = {};
+            if (item[settings['field_owner']]) {
+                userdata.owner = item[settings['field_owner']];
+            }
+            if (settings['upload_include_comment'] && item[settings['field_comment']]) {
+                userdata.comment = item[settings['field_comment']];
+            }
+            if (userdata.comment || userdata.owner) {
+                data.append('userdata', JSON.stringify(userdata));
+            }
+
+            data.append('file', file, item[settings['field_filename']]);
             $.ajax({
-                ...QUEUE_CONFIG,
-                url: QUEUE_CONFIG.url + `/${item.id}`,
-                xhr: () => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.responseType = 'blob';
-                    return xhr;
-                },
-                success: file => {
-                    const data = new FormData();
-                    if (self.settings['print']) {
-                        data.append('print', 'true');
-                    }
-                    if (self.settings['select']) {
-                        data.append('select', 'true');
-                    }
-                    if (self.settings['include_comment'] && item[self.settings['queue_comment_field']]) {
-                        data.append('userdata', item[self.settings['queue_comment_field']]);
-                    }
-                    data.append('file', file, item[self.settings['queue_filename_field']]);
-                    $.ajax({
-                        ...API_CONFIG,
-                        url: build_path('/api/files', self.settings['upload_path']),
-                        method: 'POST',
-                        data,
-                        processData: false,
-                        contentType: false,
-                    });
-                }
+                ...API_CONFIG,
+                url: build_path('/api/files', settings['upload_path']),
+                method: 'POST',
+                data,
+                processData: false,
+                contentType: false,
             });
         }
 
-        function addItem(item) {
+        function addItem(item, settings) {
             const node = self.item_template.content.firstElementChild.cloneNode(true);
             const fields = {
-                id: 'queue_id_field',
-                filename: 'queue_filename_field',
-                owner: 'queue_owner_field',
-                date: 'queue_date_field',
-                comment: 'queue_comment_field'
+                id: 'field_id',
+                filename: 'field_filename',
+                owner: 'field_owner',
+                date: 'field_date',
+                comment: 'field_comment'
             }
             for (const field in fields) {
-                if (self.settings[fields[field]] && item[self.settings[fields[field]]]) {
-                    node.querySelector(`.${field}`).innerHTML += item[self.settings[fields[field]]];
+                if (settings[fields[field]] && item[settings[fields[field]]]) {
+                    node.querySelector(`.${field}`).innerHTML += item[settings[fields[field]]];
                 } else {
                     node.querySelector(`.${field}`).classList.add('hidden')
                 }
             }
-            node.addEventListener('click', selectItem.bind(self, item))
-            return self.files_list.appendChild(node);
-        }
-
-        async function applySettings() {
-            self.settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
-            QUEUE_CONFIG.url = self.settings['queue_url'];
-            if (self.settings['queue_token']) {
-                QUEUE_CONFIG.headers = {
-                    ...QUEUE_CONFIG.headers,
-                    Authorization: `BEARER ${self.settings['queue_token']}`
-                }
-            }
-            self.button_text.innerHTML = self.settings['button_text'];
-            self.instructions = self.settings['instructions'];
+            node.addEventListener('click', selectItem.bind(self, item, settings))
+            return self.files_list.querySelector('ul').appendChild(node);
         }
 
         self.showDialog = async function () {
@@ -132,23 +128,48 @@ $(function () {
             self.files_loading.classList.remove('hidden');
 
             $(self.dialog).modal('show')
-            await applySettings();
-            if (QUEUE_CONFIG.url) {
-                $.ajax({
-                    ...QUEUE_CONFIG,
-                    success: files => {
+            const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
+            if (settings['url_list']) {
+                const headers = {};
+                let retry = true;
+                while (retry) {
+                    retry = false;
+                    if (settings['access_token']) {
+                        headers.Authorization = `Bearer ${settings['access_token']}`;
+                    }
+                    const response = await fetch(settings['url_list'], {
+                        headers
+                    });
+                    if (response.status === 200) {
+                        const files = await response.json();
                         if (files.length === 0) {
                             self.files_none.classList.remove('hidden');
                         } else {
                             self.files_list.classList.remove('hidden');
                         }
                         self.files_loading.classList.add('hidden');
-                        self.files_list.innerHTML = "";
+                        self.files_list.querySelector('ul').innerHTML = "";
                         for (const item of files) {
-                            addItem(item);
+                            addItem(item, settings);
+                        }
+                    } else if (response.status === 401) {
+                        const formData = new FormData();
+                        formData.append('username', settings['auth_username']);
+                        formData.append('password', settings['auth_password']);
+                        const tokenData = await (await fetch(settings['url_auth'], {
+                            method: "POST",
+                            body: formData
+                        })).json();
+                        if (tokenData.token) {
+                            OctoPrint.settings.savePluginSettings(PLUGIN_ID, {queue_token: tokenData.token});
+                            settings['access_token'] = tokenData.token;
+                            retry = true;
+                        } else {
+                            self.files_auth.classList.remove('hidden');
+                            self.files_loading.classList.add('hidden');
                         }
                     }
-                })
+                }
             } else {
                 self.files_config.classList.remove('hidden');
                 self.files_loading.classList.add('hidden');
@@ -160,14 +181,24 @@ $(function () {
          */
 
         self.onBoundTo = function (target, element) {
-            self[BINDINGS[target]] = document.querySelector(target);
-            return element;
+            self[BINDINGS[target]] = element;
+        }
+
+        async function applySettings() {
+            const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
+            self.button_text.innerHTML = settings['label_button_text'];
+            self.instructions.innerHTML = settings['label_dialog_instructions'];
+            self.dialog_title.innerHTML = settings['label_dialog_title'];
         }
 
         self.onStartupComplete = function () {
             applySettings();
             self.button.addEventListener('click', self.showDialog.bind(self));
             document.querySelector('.upload-buttons').append(self.button);
+            for (const button of document.querySelectorAll('.upload-buttons .fileinput-button')) {
+                button.classList.remove('span12');
+                button.classList.add('span6');
+            }
         }
     }
 

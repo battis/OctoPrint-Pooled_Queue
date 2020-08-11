@@ -13,19 +13,32 @@ class PooledQueuePlugin(SettingsPlugin,
 
 	def get_settings_defaults(self):
 		return dict(
+			label_button_text="Queue",
+			label_dialog_title="Files Available in Queue",
+			label_dialog_instructions="Select a file from the pooled queue to upload to this printer&hellip;",
+
+			auth_username=None,
+			auth_password=None,
+			access_token=None,
+			access_token_expires=None,
+
+			url_auth=None,
+			url_list=None,
+			url_file=None,
+
+			field_token="token",
+			field_token_expires=None,
+
+			field_id="id",
+			field_filename="filename",
+			field_owner="owner",
+			field_date="date",
+			field_comment="comment",
+
 			upload_path="local",
-			button_text="Pooled Queue",
-			instructions="Select a file from the pooled queue to upload to this printer&hellip;",
-			queue_url=None,
-			queue_token=None,
-			queue_id_field="id",
-			queue_filename_field="filename",
-			queue_owner_field="owner",
-			queue_date_field="date",
-			queue_comment_field="comment",
-			include_comment=True,
-			print=False,
-			select=True
+			upload_include_comment=True,
+			upload_print=False,
+			upload_select=True
 		)
 
 	# ~~ TemplatePlugin
