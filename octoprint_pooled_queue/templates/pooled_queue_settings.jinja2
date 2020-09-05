@@ -1,0 +1,134 @@
+<form id="settings_plugin_pooled_queue" class="form-horizontal">
+
+    <h3>{{ _('Pooled Queue Settings') }}</h3>
+
+    <ul class="nav nav-pills">
+        <li class="active"><a href="#plugin_pooled_queue_settings_queue_server"
+                              data-toggle="tab">{{ _('Queue Server') }}</a></li>
+        <li><a href="#plugin_pooled_queue_settings_labels" data-toggle="tab">{{ _('Customize Labels') }}</a></li>
+        <li><a href="#plugin_pooled_queue_settings_upload_config" data-toggle="tab">{{ _('Upload Configuration') }}</a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div id="plugin_pooled_queue_settings_queue_server" class="tab-pane active">
+
+            <div class="control-group">
+
+                <legend>{{ _('Queue Server') }}</legend>
+
+                <label for="plugin_pooled_queue_settings_url_queue"
+                       class="control-label">{{ _('Queue Endpoint URL') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_url_queue" type="text" class="input-block-level"
+                           data-bind="value: settings.plugins.pooled_queue.url_queue"
+                           placeholder="https://example.com/api/v1/queue">
+                    <span class="help-inline">The URL of the of the queue API endpoint. (for example <code>https://example.com/octoprint-pool/queue</code>)</span>
+                </div>
+
+                <label for="plugin_pooled_queue_settings_url_token"
+                       class="control-label">{{ _('Access Token Endpoint URL') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_url_token" type="text" class="input-block-level"
+                           data-bind="value: settings.plugins.pooled_queue.url_token"
+                           placeholder="https://example.com/api/v1/token">
+                    <span class="help-inline">The URL of the of the access token API endpoint. (for example <code>https://example.com/octoprint-pool/oauth2/token</code>)</span>
+                </div>
+
+                <label for="plugin_pooled_queue_settings_client_id" class="control-label">{{ _('Client ID') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_client_id" type="text" class="input-block-level"
+                           data-bind="value: settings.plugins.pooled_queue.oauth2_client_id"
+                           placeholder="123456">
+                    <span class="help-inline">The unique client ID for OAuth 2 authentication.</span>
+                </div>
+
+                <label for="plugin_pooled_queue_settings_client_secret"
+                       class="control-label">{{ _('Client Secret') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_client_secret" type="text" class="input-block-level"
+                           data-bind="value: settings.plugins.pooled_queue.oauth2_client_secret"
+                           placeholder="abc123">
+                    <span class="help-inline">The unique client secret for OAuth 2 authentication.</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="plugin_pooled_queue_settings_labels" class="tab-pane">
+            <div class="control-group">
+
+                <legend>{{ _('Customize Labels') }}</legend>
+
+                <label for="plugin_pooled_queue_settings_label_dialog_instructions"
+                       class="control-label">{{ _('Instructions') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_label_dialog_instructions" type="text"
+                           class="input-block-level"
+                           data-bind="value: settings.plugins.pooled_queue.label_dialog_instructions"
+                           placeholder="Select a file from the pooled queue to upload to this printer&hellip;">
+                </div>
+
+                <label for="plugin_pooled_queue_settings_label_dialog_title"
+                       class="control-label">{{ _('Dialog Title') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_label_dialog_title" type="text" class="input-block-level"
+                           data-bind="value: settings.plugins.pooled_queue.label_dialog_title"
+                           placeholder="Files Available in Queue">
+                </div>
+
+                <label for="plugin_pooled_queue_settings_label_button_text"
+                       class="control-label">{{ _('Button Label') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_label_button_text" type="text" class="input-block-level"
+                           data-bind="value: settings.plugins.pooled_queue.label_button_text"
+                           placeholder="Queue">
+                </div>
+            </div>
+        </div>
+
+        <div id="plugin_pooled_queue_settings_upload_config" class="tab-pane">
+            <div class="control-group">
+
+                <legend>{{ _('Upload Configuration') }}</legend>
+
+                <label for="plugin_pooled_queue_settings_upload_path"
+                       class="control-label">{{ _('Upload Path') }}</label>
+                <div class="controls" id="plugin_pooled_queue_settings_upload_path">
+                    <label>
+                        <input type="radio" class="input-block-level"
+                               data-bind="value: settings.plugins.pooled_queue.upload_path"
+                               value="local">
+                        Local
+                    </label>
+                    <label>
+                        <input type="radio" class="input-block-level"
+                               data-bind="value: settings.plugins.pooled_queue.upload_path"
+                               value="sd">
+                        SD Card
+                    </label>
+                </div>
+
+                <label for="plugin_pooled_queue_settings_include_comment"
+                       class="control-label">{{ _('Include Comment') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_include_comment" type="checkbox" class="input-block-level"
+                           data-bind="checked: settings.plugins.pooled_queue.include_comment">
+                </div>
+
+                <label for="plugin_pooled_queue_settings_select"
+                       class="control-label">{{ _('Select after upload') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_select" type="checkbox" class="input-block-level"
+                           data-bind="checked: settings.plugins.pooled_queue.upload_select">
+                </div>
+
+                <label for="plugin_pooled_queue_settings_print"
+                       class="control-label">{{ _('Print after upload') }}</label>
+                <div class="controls">
+                    <input id="plugin_pooled_queue_settings_print" type="checkbox" class="input-block-level"
+                           data-bind="checked: settings.plugins.pooled_queue.upload_print">
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

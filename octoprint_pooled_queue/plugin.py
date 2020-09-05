@@ -13,27 +13,21 @@ class PooledQueuePlugin(SettingsPlugin,
 
 	def get_settings_defaults(self):
 		return dict(
-			label_button_text="Queue",
-			label_dialog_title="Files Available in Queue",
-			label_dialog_instructions="Select a file from the pooled queue to upload to this printer&hellip;",
-
-			auth_username=None,
-			auth_password=None,
+			oauth2_client_id=None,
+			oauth2_client_secret=None,
 			access_token=None,
-			access_token_expires=None,
-
-			url_auth=None,
-			url_list=None,
-			url_file=None,
-
-			field_token="token",
-			field_token_expires=None,
+			url_token=None,
+			url_queue=None,
 
 			field_id="id",
 			field_filename="filename",
-			field_owner="owner",
-			field_date="date",
+			field_tags="tags",
+			field_date="created",
 			field_comment="comment",
+
+			label_button_text="Queue",
+			label_dialog_title="Files Available in Queue",
+			label_dialog_instructions="Select a file from the pooled queue to upload to this printer&hellip;",
 
 			upload_path="local",
 			upload_include_comment=True,
@@ -44,10 +38,13 @@ class PooledQueuePlugin(SettingsPlugin,
 	# ~~ TemplatePlugin
 
 	def get_template_configs(self):
-		return dict(
-			type="generic",
-			template="pooled_queue.jinja2"
-		)
+		return [
+			dict(type="settings"),
+			dict(
+				type="generic",
+				template="pooled_queue.jinja2"
+			)
+		]
 
 	# ~~ AssetPlugin mixin
 
@@ -67,7 +64,7 @@ class PooledQueuePlugin(SettingsPlugin,
 		# for details.
 		return dict(
 			pooled_queue=dict(
-				displayName="Pooled-queue Plugin",
+				displayName="Pooled Queue Plugin",
 				displayVersion=self._plugin_version,
 
 				# version check: github repository

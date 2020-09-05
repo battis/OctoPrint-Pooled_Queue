@@ -59,34 +59,50 @@ $(function () {
             }).filter(x => x.length).join('/')
         }
 
+        async function authorize(settings, force = false) {
+            if (force || false === !!settings['access_token']) {
+                // FIXME will need to be updated to authorization code grant
+                const form = new FormData();
+                form.append('grant_type', 'client_credentials');
+                form.append('client_id', settings['oauth2_client_id']);
+                form.append('client_secret', settings['oauth2_client_secret']);
+                const data = await (await fetch(settings['url_token'], {
+                    method: 'POST',
+                    body: form
+                })).json();
+                OctoPrint.settings.savePluginSettings(PLUGIN_ID, {
+                    access_token: data.access_token
+                });
+                return data.access_token;
+            }
+            return settings['access_token'];
+        }
+
         async function selectItem(item, settings) {
             $(self.dialog).modal('hide');
 
-            let url = settings['url_file'];
-            if (!url) {
-                url = settings['url_list'];
-            }
             const headers = {};
             if (settings['access_token']) {
                 headers.Authorization = `Bearer ${settings['access_token']}`;
             }
 
-            const file = await (await fetch(`${url}/${item.id}`, {
+            const file = await (await fetch(`${settings['url_queue']}/${item.id}`, {
                 method: 'DELETE',
-                headers
+                headers: headers,
+                credentials: 'include'
             })).blob();
             const data = new FormData();
             data.append('print', settings['upload_print']);
             data.append('select', settings['upload_select']);
 
             const userdata = {};
-            if (item[settings['field_owner']]) {
-                userdata.owner = item[settings['field_owner']];
+            if (item[settings['field_tags']]) {
+                userdata.tags = item[settings['field_tags']];
             }
             if (settings['upload_include_comment'] && item[settings['field_comment']]) {
                 userdata.comment = item[settings['field_comment']];
             }
-            if (userdata.comment || userdata.owner) {
+            if (userdata.comment || userdata.tags) {
                 data.append('userdata', JSON.stringify(userdata));
             }
 
@@ -106,12 +122,15 @@ $(function () {
             const fields = {
                 id: 'field_id',
                 filename: 'field_filename',
-                owner: 'field_owner',
+                tags: 'field_tags',
                 date: 'field_date',
                 comment: 'field_comment'
             }
             for (const field in fields) {
                 if (settings[fields[field]] && item[settings[fields[field]]]) {
+                    if (field === 'date') {
+                        item[settings[fields[field]]] = new Date(item[settings[fields[field]]]).toDateString();
+                    }
                     node.querySelector(`.${field}`).innerHTML += item[settings[fields[field]]];
                 } else {
                     node.querySelector(`.${field}`).classList.add('hidden')
@@ -129,16 +148,18 @@ $(function () {
 
             $(self.dialog).modal('show')
             const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
-            if (settings['url_list']) {
+            if (settings['url_queue']) {
                 const headers = {};
                 let retry = true;
+                let refreshed = false;
                 while (retry) {
                     retry = false;
                     if (settings['access_token']) {
                         headers.Authorization = `Bearer ${settings['access_token']}`;
                     }
-                    const response = await fetch(settings['url_list'], {
-                        headers
+                    const response = await fetch(settings['url_queue'], {
+                        headers: headers,
+                        credentials: 'include'
                     });
                     if (response.status === 200) {
                         const files = await response.json();
@@ -152,22 +173,10 @@ $(function () {
                         for (const item of files) {
                             addItem(item, settings);
                         }
-                    } else if (response.status === 401) {
-                        const formData = new FormData();
-                        formData.append('username', settings['auth_username']);
-                        formData.append('password', settings['auth_password']);
-                        const tokenData = await (await fetch(settings['url_auth'], {
-                            method: "POST",
-                            body: formData
-                        })).json();
-                        if (tokenData.token) {
-                            OctoPrint.settings.savePluginSettings(PLUGIN_ID, {queue_token: tokenData.token});
-                            settings['access_token'] = tokenData.token;
-                            retry = true;
-                        } else {
-                            self.files_auth.classList.remove('hidden');
-                            self.files_loading.classList.add('hidden');
-                        }
+                    } else if (response.status === 401 && !refreshed) {
+                        settings['access_token'] = await authorize(settings, true);
+                        refreshed = true;
+                        retry = true;
                     }
                 }
             } else {
@@ -186,6 +195,7 @@ $(function () {
 
         async function applySettings() {
             const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
+            await authorize(settings);
             self.button_text.innerHTML = settings['label_button_text'];
             self.instructions.innerHTML = settings['label_dialog_instructions'];
             self.dialog_title.innerHTML = settings['label_dialog_title'];
@@ -204,6 +214,6 @@ $(function () {
 
     OCTOPRINT_VIEWMODELS.push({
         construct: PooledQueueViewModel,
-        elements: Object.keys(BINDINGS)
+        elements: Object.keys(BINDINGS) // TODO do we really need to bind _everything_?
     });
 });
