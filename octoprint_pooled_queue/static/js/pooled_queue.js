@@ -59,23 +59,62 @@ $(function () {
             }).filter(x => x.length).join('/')
         }
 
-        async function authorize(settings, force = false) {
-            if (force || false === !!settings['access_token']) {
-                // FIXME will need to be updated to authorization code grant
-                const form = new FormData();
-                form.append('grant_type', 'client_credentials');
-                form.append('client_id', settings['oauth2_client_id']);
-                form.append('client_secret', settings['oauth2_client_secret']);
-                const data = await (await fetch(settings['url_token'], {
-                    method: 'POST',
-                    body: form
-                })).json();
-                OctoPrint.settings.savePluginSettings(PLUGIN_ID, {
-                    access_token: data.access_token
-                });
-                return data.access_token;
+        async function authorize(settings) {
+            if (settings['access_token'] && settings['access_token_expiration'] > Date.now() - (5 * 60 * 1000)) { // 5 minute buffer on expiry
+                return settings['access_token'];
             }
-            return settings['access_token'];
+
+            if (settings['refresh_token']) {
+                const formData = new FormData();
+                formData.append('grant_type', 'refresh_token');
+                formData.append('refresh_token', settings['refresh_token']);
+                formData.append('client_id', settings['oauth2_client_id']);
+                const response = await (await fetch(settings['url_token'], {
+                    method: 'POST',
+                    body: formData
+                })).json();
+                console.log(response);
+            }
+
+            if (settings['url_authorize']) {
+                const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                const redirect_uri = new URL(settings['url_authorize']).pathname.replace('/authorize', `/state/${state}`);
+                const authorize_code_uri = settings['url_authorize'].replace('/authorize', `/state/${state}`);
+                const authForm = document.createElement('form');
+                authForm.target = '_blank';
+                authForm.method = 'GET';
+                authForm.action = settings['url_authorize'];
+                authForm.innerHTML = `
+                    <input type="hidden" name="response_type" value="code">
+                    <input type="hidden" name="client_id" value="${settings['oauth2_client_id']}">
+                    <input type="hidden" name="redirect_uri" value="${redirect_uri}">
+                    <input type="hidden" name="state" value="${state}">
+                `;
+                document.body.appendChild(authForm);
+                authForm.submit();
+                document.body.removeChild(authForm);
+
+                const authorization = await (await fetch(authorize_code_uri)).json();
+
+                const formData = new FormData();
+                formData.append('grant_type', 'authorization_code');
+                formData.append('code', authorization.authorization_code);
+                formData.append('client_id', settings['oauth2_client_id']);
+                formData.append('client_secret', settings['oauth2_client_secret']);
+                formData.append('redirect_uri', redirect_uri);
+                const accessToken = await (await fetch(settings['url_token'], {
+                    method: 'POST',
+                    body: formData
+                })).json();
+                console.log(accessToken);
+
+                OctoPrint.settings.savePluginSettings(PLUGIN_ID, {
+                    access_token: accessToken.access_token,
+                    access_token_expiration: Date.now() + 1000 * accessToken.expires_in,
+                    refresh_token: accessToken.refresh_token
+                });
+                return accessToken.access_token;
+            }
         }
 
         async function selectItem(item, settings) {
@@ -195,7 +234,6 @@ $(function () {
 
         async function applySettings() {
             const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
-            await authorize(settings);
             self.button_text.innerHTML = settings['label_button_text'];
             self.instructions.innerHTML = settings['label_dialog_instructions'];
             self.dialog_title.innerHTML = settings['label_dialog_title'];
