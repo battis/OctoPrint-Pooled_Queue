@@ -1,4 +1,4 @@
-# OctoPrint-PooledQueue
+# OctoPrint-Pooled_Queue
 
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/battis/OctoPrint-Pooled_Queue/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/battis/OctoPrint-Pooled_Queue/?branch=master)
 

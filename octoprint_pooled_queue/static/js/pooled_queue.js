@@ -1,5 +1,5 @@
 /*
- * View model for OctoPrint-PooledQueue
+ * View model for OctoPrint-Pooled_Queue
  *
  * Author: Seth Battis
  * License: AGPLv3

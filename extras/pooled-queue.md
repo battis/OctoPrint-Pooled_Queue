@@ -2,7 +2,7 @@
 layout: plugin
 
 id: pooled-queue
-title: OctoPrint-PooledQueue
+title: OctoPrint-Pooled_Queue
 description: TODO
 author: Seth Battis
 license: AGPLv3
@@ -10,9 +10,9 @@ license: AGPLv3
 # TODO
 date: today's date in format YYYY-MM-DD, e.g. 2015-04-21
 
-homepage: https://github.com/battis/OctoPrint-PooledQueue
-source: https://github.com/battis/OctoPrint-PooledQueue
-archive: https://github.com/battis/OctoPrint-PooledQueue/archive/master.zip
+homepage: https://github.com/battis/OctoPrint-Pooled_Queue
+source: https://github.com/battis/OctoPrint-Pooled_Queue
+archive: https://github.com/battis/OctoPrint-Pooled_Queue/archive/master.zip
 
 # TODO
 # Set this to true if your plugin uses the dependency_links setup parameter to include
@@ -82,16 +82,16 @@ compatibility:
   - windows
   - macos
   - freebsd
-  
+
   # Compatible Python version
   #
   # Plugins should aim for compatibility for Python 2 and 3 for now, in which case the value should be ">=2.7,<4".
   #
-  # Plugins that only wish to support Python 3 should set it to ">=3,<4". 
+  # Plugins that only wish to support Python 3 should set it to ">=3,<4".
   #
   # If your plugin only supports Python 2 (worst case, not recommended for newly developed plugins since Python 2
   # is EOL), leave at ">=2.7,<3"
-  
+
   python: ">=2.7,<3"
 
 ---

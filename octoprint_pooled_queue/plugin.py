@@ -73,10 +73,10 @@ class PooledQueuePlugin(SettingsPlugin,
 				# version check: github repository
 				type="github_release",
 				user="battis",
-				repo="OctoPrint-PooledQueue",
+				repo="OctoPrint-Pooled_Queue",
 				current=self._plugin_version,
 
 				# update method: pip
-				pip="https://github.com/battis/OctoPrint-PooledQueue/archive/{target_version}.zip"
+				pip="https://github.com/battis/OctoPrint-Pooled_Queue/archive/{target_version}.zip"
 			)
 		)
