@@ -25,6 +25,32 @@ $(function () {
         [`${PLUGIN_SELECTOR}_item_template`]: 'item_template'
     };
 
+    const KEY = {
+        oauth2_client_id: 'oauth2_client_id',
+        oauth2_client_secret: 'oauth2_client_secret',
+        access_token: 'access_token',
+        access_token_expiration: 'access_token_expiration',
+        refresh_token: 'refresh_token',
+        url_authorize: 'url_authorize',
+        url_token: 'url_token',
+        url_queue: 'url_queue',
+
+        field_id: 'field_id',
+        field_filename: 'field_filename',
+        field_tags: 'field_tags',
+        field_date: 'field_date',
+        field_comment: 'field_comment',
+
+        label_button_text: 'label_button_text',
+        label_dialog_title: 'label_dialog_title',
+        label_dialog_instructions: 'label_dialog_instructions',
+
+        upload_path: 'upload_path',
+        upload_include_comment: 'upload_include_comment',
+        upload_print: 'upload_print',
+        upload_select: 'upload_select'
+    }
+
     function PooledQueueViewModel() {
 
         const self = this;
@@ -41,9 +67,9 @@ $(function () {
         self.files_list = undefined;
         self.item_template = undefined;
 
-        const API_CONFIG = {}
+        const OCTOPRINT_API_CALL_TEMPLATE = {}
         if (UI_API_KEY) {
-            API_CONFIG.headers = {'X-Api-Key': UI_API_KEY};
+            OCTOPRINT_API_CALL_TEMPLATE.headers = {'X-Api-Key': UI_API_KEY};
         }
 
         /**
@@ -59,96 +85,170 @@ $(function () {
             }).filter(x => x.length).join('/')
         }
 
-        async function authorize(settings) {
-            if (settings['access_token'] && settings['access_token_expiration'] > Date.now() - (5 * 60 * 1000)) { // 5 minute buffer on expiry
-                return settings['access_token'];
-            }
+        async function saveAccessToken(tokenData) {
+            tokenData = {
+                access_token: undefined,
+                expires_in: undefined,
+                refresh_token: undefined,
+                scope: undefined,
+                token_type: undefined,
+                ...tokenData
+            };
+            OctoPrint.settings.savePluginSettings(PLUGIN_ID, {
+                access_token: tokenData.access_token,
+                access_token_expiration: Date.now() + 1000 * tokenData.expires_in,
+                refresh_token: tokenData.refresh_token
+            });
+            return tokenData.access_token;
+        }
 
-            if (settings['refresh_token']) {
-                const formData = new FormData();
-                formData.append('grant_type', 'refresh_token');
-                formData.append('refresh_token', settings['refresh_token']);
-                formData.append('client_id', settings['oauth2_client_id']);
-                const response = await (await fetch(settings['url_token'], {
+        async function refreshTokenGrant(settings) {
+            return await saveAccessToken(
+                await pooledQueueApiCall({
+                    endpoint: settings[KEY.url_token],
                     method: 'POST',
-                    body: formData
-                })).json();
-                console.log(response);
+                    body: {
+                        grant_type: 'refresh_token',
+                        refresh_token: settings[KEY.refresh_token],
+                        client_id: settings[KEY.oauth2_client_id],
+                        client_secret: settings[KEY.oauth2_client_secret]
+                    },
+                    requiresAuthorizationHeader: false
+                })
+            );
+        }
+
+        async function authorizationCodeGrant(settings) {
+            const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const redirect_uri = new URL(settings[KEY.url_authorize].replace('/authorize', `/state/${state}`));
+            const authorizationRequest = {
+                response_type: 'code',
+                client_id: settings[KEY.oauth2_client_id],
+                redirect_uri: redirect_uri.pathname,
+                state: state
+            };
+            const authForm = document.createElement('form');
+            authForm.target = '_blank';
+            authForm.method = 'GET';
+            authForm.action = settings[KEY.url_authorize]
+            for (const field in authorizationRequest) {
+                authForm.innerHTML += `<input type="hidden" name="${field}" value="${authorizationRequest[field]}">`
+            }
+            document.body.appendChild(authForm);
+            authForm.submit();
+            // TODO throw up modal message explaining that the auth form should be in another tab
+            document.body.removeChild(authForm);
+
+            const authorization = {
+                authorization_code: undefined,
+                expires: undefined,
+                state: undefined,
+                ...await pooledQueueApiCall({
+                    endpoint: redirect_uri,
+                    requiresAuthorizationHeader: false
+                })
             }
 
-            if (settings['url_authorize']) {
-                const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-                const redirect_uri = new URL(settings['url_authorize']).pathname.replace('/authorize', `/state/${state}`);
-                const authorize_code_uri = settings['url_authorize'].replace('/authorize', `/state/${state}`);
-                const authForm = document.createElement('form');
-                authForm.target = '_blank';
-                authForm.method = 'GET';
-                authForm.action = settings['url_authorize'];
-                authForm.innerHTML = `
-                    <input type="hidden" name="response_type" value="code">
-                    <input type="hidden" name="client_id" value="${settings['oauth2_client_id']}">
-                    <input type="hidden" name="redirect_uri" value="${redirect_uri}">
-                    <input type="hidden" name="state" value="${state}">
-                `;
-                document.body.appendChild(authForm);
-                authForm.submit();
-                document.body.removeChild(authForm);
-
-                const authorization = await (await fetch(authorize_code_uri)).json();
-
-                const formData = new FormData();
-                formData.append('grant_type', 'authorization_code');
-                formData.append('code', authorization.authorization_code);
-                formData.append('client_id', settings['oauth2_client_id']);
-                formData.append('client_secret', settings['oauth2_client_secret']);
-                formData.append('redirect_uri', redirect_uri);
-                const accessToken = await (await fetch(settings['url_token'], {
+            return await saveAccessToken(
+                await pooledQueueApiCall({
+                    endpoint: settings[KEY.url_token],
                     method: 'POST',
-                    body: formData
-                })).json();
-                console.log(accessToken);
+                    body: {
+                        grant_type: 'authorization_code',
+                        code: authorization.authorization_code,
+                        client_id: settings[KEY.oauth2_client_id],
+                        client_secret: settings[KEY.oauth2_client_secret],
+                        redirect_uri: redirect_uri.pathname
+                    },
+                    requiresAuthorizationHeader: false
+                })
+            );
+        }
 
-                OctoPrint.settings.savePluginSettings(PLUGIN_ID, {
-                    access_token: accessToken.access_token,
-                    access_token_expiration: Date.now() + 1000 * accessToken.expires_in,
-                    refresh_token: accessToken.refresh_token
-                });
-                return accessToken.access_token;
+        async function accessToken() {
+            // TODO handle authentication failures
+            const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
+            if (settings[KEY.access_token] && settings[KEY.access_token_expiration] > Date.now() - (30 * 1000)) { // 30 second buffer on expiry
+                return settings[KEY.access_token];
             }
+
+            if (settings[KEY.refresh_token]) {
+                return await refreshTokenGrant(settings);
+            }
+
+            if (settings[KEY.url_authorize]) {
+                return await authorizationCodeGrant(settings);
+            }
+        }
+
+        async function pooledQueueApiCall(request = {}) {
+            // apply default properties
+            request = {
+                method: 'GET',
+                headers: {},
+                requiresAuthorizationHeader: true,
+                returnJson: true,
+                ...request
+            }
+
+            if (request.endpoint === undefined) {
+                throw "request.endpoint undefined";
+            }
+
+            // convert body object to FormData object for API
+            if (request.body !== undefined && false === FormData.isPrototypeOf(request.body)) {
+                const formData = new FormData();
+                for (const prop of Object.keys(request.body)) {
+                    formData.append(prop, request.body[prop]);
+                }
+                request.body = formData;
+            }
+            if (request.requiresAuthorizationHeader) {
+                request.headers.Authorization = `Bearer ${await accessToken()}`;
+            }
+
+            // TODO deal with failed requests
+            const response = await fetch(request.endpoint, {
+                method: request.method,
+                headers: request.headers,
+                credentials: 'include',
+                body: request.body
+            });
+            if (request.returnJson) {
+                return await response.json();
+            }
+            return response;
         }
 
         async function selectItem(item, settings) {
             $(self.dialog).modal('hide');
 
-            const headers = {};
-            if (settings['access_token']) {
-                headers.Authorization = `Bearer ${settings['access_token']}`;
-            }
-
-            const file = await (await fetch(`${settings['url_queue']}/${item.id}`, {
-                method: 'DELETE',
-                headers: headers,
-                credentials: 'include'
-            })).blob();
+            const file = await (
+                await pooledQueueApiCall({
+                    endpoint: `${settings[KEY.url_queue]}/${item.id}`,
+                    method: 'DELETE',
+                    returnJson: false
+                })
+            ).blob();
             const data = new FormData();
-            data.append('print', settings['upload_print']);
-            data.append('select', settings['upload_select']);
+            data.append('print', settings[KEY.upload_print]);
+            data.append('select', settings[KEY.upload_select]);
 
             const userdata = {};
-            if (item[settings['field_tags']]) {
-                userdata.tags = item[settings['field_tags']];
+            if (item[settings[KEY.field_tags]]) {
+                userdata.tags = item[settings[KEY.field_tags]];
             }
-            if (settings['upload_include_comment'] && item[settings['field_comment']]) {
-                userdata.comment = item[settings['field_comment']];
+            if (settings[KEY.upload_include_comment] && item[settings[KEY.field_comment]]) {
+                userdata.comment = item[settings[KEY.field_comment]];
             }
             if (userdata.comment || userdata.tags) {
                 data.append('userdata', JSON.stringify(userdata));
             }
 
-            data.append('file', file, item[settings['field_filename']]);
+            data.append('file', file, item[settings[KEY.field_filename]]);
             $.ajax({
-                ...API_CONFIG,
-                url: build_path('/api/files', settings['upload_path']),
+                ...OCTOPRINT_API_CALL_TEMPLATE,
+                url: build_path('/api/files', settings[KEY.upload_path]),
                 method: 'POST',
                 data,
                 processData: false,
@@ -158,6 +258,7 @@ $(function () {
 
         function addItem(item, settings) {
             const node = self.item_template.content.firstElementChild.cloneNode(true);
+            // TODO lose this jankiness
             const fields = {
                 id: 'field_id',
                 filename: 'field_filename',
@@ -179,45 +280,23 @@ $(function () {
             return self.files_list.querySelector('ul').appendChild(node);
         }
 
-        self.showDialog = async function () {
+        self.showDialog = async function (settings) {
             for (const node of self.dialog.querySelectorAll('.files')) {
                 node.classList.add('hidden');
             }
             self.files_loading.classList.remove('hidden');
 
             $(self.dialog).modal('show')
-            const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
-            if (settings['url_queue']) {
-                const headers = {};
-                let retry = true;
-                let refreshed = false;
-                while (retry) {
-                    retry = false;
-                    if (settings['access_token']) {
-                        headers.Authorization = `Bearer ${settings['access_token']}`;
-                    }
-                    const response = await fetch(settings['url_queue'], {
-                        headers: headers,
-                        credentials: 'include'
-                    });
-                    if (response.status === 200) {
-                        const files = await response.json();
-                        if (files.length === 0) {
-                            self.files_none.classList.remove('hidden');
-                        } else {
-                            self.files_list.classList.remove('hidden');
-                        }
-                        self.files_loading.classList.add('hidden');
-                        self.files_list.querySelector('ul').innerHTML = "";
-                        for (const item of files) {
-                            addItem(item, settings);
-                        }
-                    } else if (response.status === 401 && !refreshed) {
-                        settings['access_token'] = await authorize(settings, true);
-                        refreshed = true;
-                        retry = true;
-                    }
+            if (settings[KEY.url_queue]) {
+                const files = await pooledQueueApiCall({
+                    endpoint: settings[KEY.url_queue]
+                });
+                self.files_list.querySelector('ul').innerHTML = null;
+                for (const item of files) {
+                    addItem(item, settings);
                 }
+                self.files_list.classList.add('hidden');
+                self.files_list.classList.remove('hidden');
             } else {
                 self.files_config.classList.remove('hidden');
                 self.files_loading.classList.add('hidden');
@@ -234,19 +313,20 @@ $(function () {
 
         async function applySettings() {
             const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
-            self.button_text.innerHTML = settings['label_button_text'];
-            self.instructions.innerHTML = settings['label_dialog_instructions'];
-            self.dialog_title.innerHTML = settings['label_dialog_title'];
+            self.button_text.innerHTML = settings[KEY.label_button_text];
+            self.instructions.innerHTML = settings[KEY.label_dialog_instructions];
+            self.dialog_title.innerHTML = settings[KEY.label_dialog_title];
+            self.button.addEventListener('click', self.showDialog.bind(self, settings));
         }
 
         self.onStartupComplete = function () {
-            applySettings();
-            self.button.addEventListener('click', self.showDialog.bind(self));
             document.querySelector('.upload-buttons').append(self.button);
             for (const button of document.querySelectorAll('.upload-buttons .fileinput-button')) {
                 button.classList.remove('span12');
                 button.classList.add('span6');
             }
+            // noinspection JSIgnoredPromiseFromCall
+            applySettings();
         }
     }
 
