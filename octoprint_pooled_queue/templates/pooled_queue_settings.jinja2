@@ -17,31 +17,13 @@
 
                 <legend>{{ _('Queue Server') }}</legend>
 
-                <label for="plugin_pooled_queue_settings_url_authorize"
-                       class="control-label">{{ _('Authorize Endpoint URL') }}</label>
+                <label for="plugin_pooled_queue_settings_pool_url"
+                       class="control-label">{{ _('Pool URL') }}</label>
                 <div class="controls">
-                    <input id="plugin_pooled_queue_settings_url_authorize" type="text" class="input-block-level"
-                           data-bind="value: settings.plugins.pooled_queue.url_authorize"
-                           placeholder="https://example.com/api/v1/token">
-                    <span class="help-inline">The URL of the of the access token API endpoint. (for example <code>https://example.com/octoprint-pool/oauth2/token</code>)</span>
-                </div>
-
-                <label for="plugin_pooled_queue_settings_url_token"
-                       class="control-label">{{ _('Access Token Endpoint URL') }}</label>
-                <div class="controls">
-                    <input id="plugin_pooled_queue_settings_url_token" type="text" class="input-block-level"
-                           data-bind="value: settings.plugins.pooled_queue.url_token"
-                           placeholder="https://example.com/api/v1/token">
-                    <span class="help-inline">The URL of the of the access token API endpoint. (for example <code>https://example.com/octoprint-pool/oauth2/token</code>)</span>
-                </div>
-
-                <label for="plugin_pooled_queue_settings_url_queue"
-                       class="control-label">{{ _('Queue Endpoint URL') }}</label>
-                <div class="controls">
-                    <input id="plugin_pooled_queue_settings_url_queue" type="text" class="input-block-level"
-                           data-bind="value: settings.plugins.pooled_queue.url_queue"
-                           placeholder="https://example.com/api/v1/queue">
-                    <span class="help-inline">The URL of the of the queue API endpoint. (for example <code>https://example.com/octoprint-pool/queue</code>)</span>
+                    <input id="plugin_pooled_queue_settings_pool_url" type="text" class="input-block-level"
+                           data-bind="value: settings.plugins.pooled_queue.pool_url"
+                           placeholder="https://example.com/pool">
+                    <span class="help-inline">The URL of the of the OctoPrint Pool. (for example <code>https://example.com/octoprint-pool</code>)</span>
                 </div>
 
                 <label for="plugin_pooled_queue_settings_client_id" class="control-label">{{ _('Client ID') }}</label>

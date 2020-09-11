@@ -10,9 +10,9 @@ $(function () {
     const PLUGIN_SELECTOR = `#plugin_${PLUGIN_ID}`
     const BINDINGS = {
         [`${PLUGIN_SELECTOR}_button`]: 'button',
-        [`${PLUGIN_SELECTOR}_dialog`]: 'dialog',
-
         [`${PLUGIN_SELECTOR}_button_text`]: 'button_text',
+
+        [`${PLUGIN_SELECTOR}_dialog`]: 'dialog',
         [`${PLUGIN_SELECTOR}_dialog_title`]: 'dialog_title',
         [`${PLUGIN_SELECTOR}_instructions`]: 'instructions',
 
@@ -31,9 +31,7 @@ $(function () {
         access_token: 'access_token',
         access_token_expiration: 'access_token_expiration',
         refresh_token: 'refresh_token',
-        url_authorize: 'url_authorize',
-        url_token: 'url_token',
-        url_queue: 'url_queue',
+        pool_url: 'pool_url',
 
         field_id: 'field_id',
         field_filename: 'field_filename',
@@ -57,19 +55,38 @@ $(function () {
 
         self.button = undefined;
         self.button_text = undefined;
+
         self.dialog = undefined;
         self.dialog_title = undefined;
         self.instructions = undefined;
+
         self.files_none = undefined;
         self.files_config = undefined;
         self.files_auth = undefined;
         self.files_loading = undefined;
         self.files_list = undefined;
+
         self.item_template = undefined;
 
         const OCTOPRINT_API_CALL_TEMPLATE = {}
         if (UI_API_KEY) {
             OCTOPRINT_API_CALL_TEMPLATE.headers = {'X-Api-Key': UI_API_KEY};
+        }
+
+        self.filesContent = desiredView => {
+            for(const view of [
+                self.files_none,
+                self.files_config,
+                self.files_auth,
+                self.files_loading,
+                self.files_list
+            ]) {
+                if (view === desiredView) {
+                    view.classList.remove('hidden');
+                } else {
+                    view.classList.add('hidden');
+                }
+            }
         }
 
         /**
@@ -105,7 +122,7 @@ $(function () {
         async function refreshTokenGrant(settings) {
             return await saveAccessToken(
                 await pooledQueueApiCall({
-                    endpoint: settings[KEY.url_token],
+                    endpoint: `${settings[KEY.pool_url]}/api/v1/oauth2/token`,
                     method: 'POST',
                     body: {
                         grant_type: 'refresh_token',
@@ -120,7 +137,7 @@ $(function () {
 
         async function authorizationCodeGrant(settings) {
             const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-            const redirect_uri = new URL(settings[KEY.url_authorize].replace('/authorize', `/state/${state}`));
+            const redirect_uri = new URL(`${settings[KEY.pool_url]}/api/v1/oauth2/state/${state}`);
             const authorizationRequest = {
                 response_type: 'code',
                 client_id: settings[KEY.oauth2_client_id],
@@ -130,7 +147,7 @@ $(function () {
             const authForm = document.createElement('form');
             authForm.target = '_blank';
             authForm.method = 'GET';
-            authForm.action = settings[KEY.url_authorize]
+            authForm.action = `${settings[KEY.pool_url]}/api/v1/oauth2/authorize`
             for (const field in authorizationRequest) {
                 authForm.innerHTML += `<input type="hidden" name="${field}" value="${authorizationRequest[field]}">`
             }
@@ -151,7 +168,7 @@ $(function () {
 
             return await saveAccessToken(
                 await pooledQueueApiCall({
-                    endpoint: settings[KEY.url_token],
+                    endpoint: `${settings[KEY.pool_url]}/api/v1/oauth2/token`,
                     method: 'POST',
                     body: {
                         grant_type: 'authorization_code',
@@ -176,7 +193,7 @@ $(function () {
                 return await refreshTokenGrant(settings);
             }
 
-            if (settings[KEY.url_authorize]) {
+            if (settings[KEY.pool_url]) {
                 return await authorizationCodeGrant(settings);
             }
         }
@@ -225,7 +242,7 @@ $(function () {
 
             const file = await (
                 await pooledQueueApiCall({
-                    endpoint: `${settings[KEY.url_queue]}/${item.id}`,
+                    endpoint: `${settings[KEY.pool_url]}/api/v1/queue/${item.id}`,
                     method: 'DELETE',
                     returnJson: false
                 })
@@ -281,25 +298,20 @@ $(function () {
         }
 
         self.showDialog = async function (settings) {
-            for (const node of self.dialog.querySelectorAll('.files')) {
-                node.classList.add('hidden');
-            }
-            self.files_loading.classList.remove('hidden');
+            self.filesContent(self.files_loading);
 
             $(self.dialog).modal('show')
-            if (settings[KEY.url_queue]) {
+            if (settings[KEY.pool_url]) {
                 const files = await pooledQueueApiCall({
-                    endpoint: settings[KEY.url_queue]
+                    endpoint: `${settings[KEY.pool_url]}/api/v1/queue`
                 });
                 self.files_list.querySelector('ul').innerHTML = null;
                 for (const item of files) {
                     addItem(item, settings);
                 }
-                self.files_list.classList.add('hidden');
-                self.files_list.classList.remove('hidden');
+                self.filesContent(self.files_list);
             } else {
-                self.files_config.classList.remove('hidden');
-                self.files_loading.classList.add('hidden');
+                self.filesContent(self.files_config);
             }
         }
 
