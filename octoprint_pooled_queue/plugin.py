@@ -47,6 +47,11 @@ class PooledQueuePlugin(SettingsPlugin,
 			)
 		]
 
+	def get_template_vars(self):
+		return dict(
+			pool_url=self._settings.get(["pool_url"])
+		)
+
 	# ~~ AssetPlugin mixin
 
 	def get_assets(self):

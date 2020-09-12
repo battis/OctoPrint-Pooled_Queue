@@ -68,10 +68,7 @@ $(function () {
 
         self.item_template = undefined;
 
-        const OCTOPRINT_API_CALL_TEMPLATE = {}
-        if (UI_API_KEY) {
-            OCTOPRINT_API_CALL_TEMPLATE.headers = {'X-Api-Key': UI_API_KEY};
-        }
+        self.queue = undefined;
 
         self.filesContent = desiredView => {
             for(const view of [
@@ -89,164 +86,28 @@ $(function () {
             }
         }
 
-        /**
-         * https://stackoverflow.com/a/46427607
-         */
-        function build_path(...args) {
-            return args.map((part, i) => {
-                if (i === 0) {
-                    return part.trim().replace(/[\/]*$/g, '')
-                } else {
-                    return part.trim().replace(/(^[\/]*|[\/]*$)/g, '')
-                }
-            }).filter(x => x.length).join('/')
-        }
-
-        async function saveAccessToken(tokenData) {
-            tokenData = {
-                access_token: undefined,
-                expires_in: undefined,
-                refresh_token: undefined,
-                scope: undefined,
-                token_type: undefined,
-                ...tokenData
-            };
-            OctoPrint.settings.savePluginSettings(PLUGIN_ID, {
-                access_token: tokenData.access_token,
-                access_token_expiration: Date.now() + 1000 * tokenData.expires_in,
-                refresh_token: tokenData.refresh_token
-            });
-            return tokenData.access_token;
-        }
-
-        async function refreshTokenGrant(settings) {
-            return await saveAccessToken(
-                await pooledQueueApiCall({
-                    endpoint: `${settings[KEY.pool_url]}/api/v1/oauth2/token`,
-                    method: 'POST',
-                    body: {
-                        grant_type: 'refresh_token',
-                        refresh_token: settings[KEY.refresh_token],
-                        client_id: settings[KEY.oauth2_client_id],
-                        client_secret: settings[KEY.oauth2_client_secret]
-                    },
-                    requiresAuthorizationHeader: false
-                })
-            );
-        }
-
-        async function authorizationCodeGrant(settings) {
-            const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-            const redirect_uri = new URL(`${settings[KEY.pool_url]}/api/v1/oauth2/state/${state}`);
-            const authorizationRequest = {
-                response_type: 'code',
-                client_id: settings[KEY.oauth2_client_id],
-                redirect_uri: redirect_uri.pathname,
-                state: state
-            };
-            const authForm = document.createElement('form');
-            authForm.target = '_blank';
-            authForm.method = 'GET';
-            authForm.action = `${settings[KEY.pool_url]}/api/v1/oauth2/authorize`
-            for (const field in authorizationRequest) {
-                authForm.innerHTML += `<input type="hidden" name="${field}" value="${authorizationRequest[field]}">`
-            }
-            document.body.appendChild(authForm);
-            authForm.submit();
-            // TODO throw up modal message explaining that the auth form should be in another tab
-            document.body.removeChild(authForm);
-
-            const authorization = {
-                authorization_code: undefined,
-                expires: undefined,
-                state: undefined,
-                ...await pooledQueueApiCall({
-                    endpoint: redirect_uri,
-                    requiresAuthorizationHeader: false
-                })
-            }
-
-            return await saveAccessToken(
-                await pooledQueueApiCall({
-                    endpoint: `${settings[KEY.pool_url]}/api/v1/oauth2/token`,
-                    method: 'POST',
-                    body: {
-                        grant_type: 'authorization_code',
-                        code: authorization.authorization_code,
-                        client_id: settings[KEY.oauth2_client_id],
-                        client_secret: settings[KEY.oauth2_client_secret],
-                        redirect_uri: redirect_uri.pathname
-                    },
-                    requiresAuthorizationHeader: false
-                })
-            );
-        }
-
-        async function accessToken() {
-            // TODO handle authentication failures
-            const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
-            if (settings[KEY.access_token] && settings[KEY.access_token_expiration] > Date.now() - (30 * 1000)) { // 30 second buffer on expiry
-                return settings[KEY.access_token];
-            }
-
-            if (settings[KEY.refresh_token]) {
-                return await refreshTokenGrant(settings);
-            }
-
-            if (settings[KEY.pool_url]) {
-                return await authorizationCodeGrant(settings);
-            }
-        }
-
-        async function pooledQueueApiCall(request = {}) {
-            // apply default properties
-            request = {
-                method: 'GET',
-                headers: {},
-                requiresAuthorizationHeader: true,
-                returnJson: true,
-                ...request
-            }
-
-            if (request.endpoint === undefined) {
-                throw "request.endpoint undefined";
-            }
-
-            // convert body object to FormData object for API
-            if (request.body !== undefined && false === FormData.isPrototypeOf(request.body)) {
-                const formData = new FormData();
-                for (const prop of Object.keys(request.body)) {
-                    formData.append(prop, request.body[prop]);
-                }
-                request.body = formData;
-            }
-            if (request.requiresAuthorizationHeader) {
-                request.headers.Authorization = `Bearer ${await accessToken()}`;
-            }
-
-            // TODO deal with failed requests
-            const response = await fetch(request.endpoint, {
-                method: request.method,
-                headers: request.headers,
-                credentials: 'include',
-                body: request.body
-            });
-            if (request.returnJson) {
-                return await response.json();
-            }
-            return response;
-        }
-
         async function selectItem(item, settings) {
             $(self.dialog).modal('hide');
 
-            const file = await (
-                await pooledQueueApiCall({
-                    endpoint: `${settings[KEY.pool_url]}/api/v1/queue/${item.id}`,
-                    method: 'DELETE',
-                    returnJson: false
-                })
-            ).blob();
+            const OCTOPRINT_API_CALL_TEMPLATE = {}
+            if (UI_API_KEY) {
+                OCTOPRINT_API_CALL_TEMPLATE.headers = {'X-Api-Key': UI_API_KEY};
+            }
+
+            /**
+             * https://stackoverflow.com/a/46427607
+             */
+            const build_path = (...args) => {
+                return args.map((part, i) => {
+                    if (i === 0) {
+                        return String(part).trim().replace(/[\/]*$/g, '')
+                    } else {
+                        return String(part).trim().replace(/(^[\/]*|[\/]*$)/g, '')
+                    }
+                }).filter(x => x.length).join('/')
+            }
+
+            const file = await self.queue.dequeue(item.id);
             const data = new FormData();
             data.append('print', settings[KEY.upload_print]);
             data.append('select', settings[KEY.upload_select]);
@@ -302,9 +163,7 @@ $(function () {
 
             $(self.dialog).modal('show')
             if (settings[KEY.pool_url]) {
-                const files = await pooledQueueApiCall({
-                    endpoint: `${settings[KEY.pool_url]}/api/v1/queue`
-                });
+                const files = await self.queue.list();
                 self.files_list.querySelector('ul').innerHTML = null;
                 for (const item of files) {
                     addItem(item, settings);
@@ -329,6 +188,12 @@ $(function () {
             self.instructions.innerHTML = settings[KEY.label_dialog_instructions];
             self.dialog_title.innerHTML = settings[KEY.label_dialog_title];
             self.button.addEventListener('click', self.showDialog.bind(self, settings));
+            self.queue = new OctoPrintPool_Queue({
+                plugin_id: PLUGIN_ID,
+                pool_url: settings[KEY.pool_url],
+                client_id: settings[KEY.oauth2_client_id],
+                client_secret: settings[KEY.oauth2_client_secret]
+            });
         }
 
         self.onStartupComplete = function () {
