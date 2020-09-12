@@ -82,42 +82,49 @@
 
                 <legend>{{ _('Upload Configuration') }}</legend>
 
-                <label for="plugin_pooled_queue_settings_upload_path"
-                       class="control-label">{{ _('Upload Path') }}</label>
-                <div class="controls" id="plugin_pooled_queue_settings_upload_path">
-                    <label>
-                        <input type="radio" class="input-block-level"
-                               data-bind="value: settings.plugins.pooled_queue.upload_path"
-                               value="local">
-                        Local
-                    </label>
-                    <label>
-                        <input type="radio" class="input-block-level"
-                               data-bind="value: settings.plugins.pooled_queue.upload_path"
-                               value="sd">
-                        SD Card
-                    </label>
-                </div>
+                <div class="control-group">
+                    <label for="plugin_pooled_queue_settings_upload_path"
+                           class="control-label">{{ _('Upload Path') }}</label>
+                    <div class="controls" id="plugin_pooled_queue_settings_upload_path">
+                        <label class="radio">
+                            <input type="radio"
+                                   name="plugin_pooled_queue_settings_upload_path"
+                                   value="local"
+                                   data-bind="checked: settings.plugins.pooled_queue.upload_path"> {{ _('Local') }}
+                        </label>
+                        <label class="radio">
+                            <input type="radio"
+                                   name="plugin_pooled_queue_settings_upload_path"
+                                   value="sd"
+                                   data-bind="checked: settings.plugins.pooled_queue.upload_path"> {{ _('SD Card') }}
+                        </label>
+                    </div>
 
-                <label for="plugin_pooled_queue_settings_include_comment"
-                       class="control-label">{{ _('Include Comment') }}</label>
-                <div class="controls">
-                    <input id="plugin_pooled_queue_settings_include_comment" type="checkbox" class="input-block-level"
-                           data-bind="checked: settings.plugins.pooled_queue.include_comment">
-                </div>
+                    <div class="controls">
+                        <label for="plugin_pooled_queue_settings_include_comment"
+                               class="checkbox">
+                            <input id="plugin_pooled_queue_settings_include_comment"
+                                   type="checkbox"
+                                   data-bind="checked: settings.plugins.pooled_queue.include_comment"> {{ _('Include Comment') }}
+                    </div>
 
-                <label for="plugin_pooled_queue_settings_select"
-                       class="control-label">{{ _('Select after upload') }}</label>
-                <div class="controls">
-                    <input id="plugin_pooled_queue_settings_select" type="checkbox" class="input-block-level"
-                           data-bind="checked: settings.plugins.pooled_queue.upload_select">
-                </div>
+                    <div class="controls">
+                        <label for="plugin_pooled_queue_settings_select"
+                               class="checkbox">
+                            <input id="plugin_pooled_queue_settings_select"
+                                   type="checkbox"
+                                   data-bind="checked: settings.plugins.pooled_queue.upload_select"> {{ _('Select after upload') }}
+                        </label>
+                    </div>
 
-                <label for="plugin_pooled_queue_settings_print"
-                       class="control-label">{{ _('Print after upload') }}</label>
-                <div class="controls">
-                    <input id="plugin_pooled_queue_settings_print" type="checkbox" class="input-block-level"
-                           data-bind="checked: settings.plugins.pooled_queue.upload_print">
+                    <div class="controls">
+                        <label for="plugin_pooled_queue_settings_print"
+                               class="checkbox">
+                            <input id="plugin_pooled_queue_settings_print"
+                                   type="checkbox"
+                                   data-bind="checked: settings.plugins.pooled_queue.upload_print"> {{ _('Print after upload') }}
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
