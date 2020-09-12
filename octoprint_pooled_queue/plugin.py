@@ -11,6 +11,9 @@ class PooledQueuePlugin(SettingsPlugin,
 
 	# ~~ SettingsPlugin mixin
 
+	def get_settings_version(self):
+		return 1
+
 	def get_settings_defaults(self):
 		return dict(
 			oauth2_client_id=None,

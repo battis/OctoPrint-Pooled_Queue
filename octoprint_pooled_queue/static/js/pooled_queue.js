@@ -1,3 +1,6 @@
+/*jslint esversion: 9 */
+/*global $,OctoPrint,OCTOPRINT_VIEWMODELS,UI_API_KEY,OctoPrintPool_Queue */
+
 /*
  * View model for OctoPrint-Pooled_Queue
  *
@@ -5,9 +8,10 @@
  * License: AGPLv3
  */
 $(function () {
+    "use strict";
     const PLUGIN_ID = 'pooled_queue';
 
-    const PLUGIN_SELECTOR = `#plugin_${PLUGIN_ID}`
+    const PLUGIN_SELECTOR = `#plugin_${PLUGIN_ID}`;
     const BINDINGS = {
         [`${PLUGIN_SELECTOR}_button`]: 'button',
         [`${PLUGIN_SELECTOR}_button_text`]: 'button_text',
@@ -47,7 +51,7 @@ $(function () {
         upload_include_comment: 'upload_include_comment',
         upload_print: 'upload_print',
         upload_select: 'upload_select'
-    }
+    };
 
     function PooledQueueViewModel() {
 
@@ -84,12 +88,12 @@ $(function () {
                     view.classList.add('hidden');
                 }
             }
-        }
+        };
 
         async function selectItem(item, settings) {
             $(self.dialog).modal('hide');
 
-            const OCTOPRINT_API_CALL_TEMPLATE = {}
+            const OCTOPRINT_API_CALL_TEMPLATE = {};
             if (UI_API_KEY) {
                 OCTOPRINT_API_CALL_TEMPLATE.headers = {'X-Api-Key': UI_API_KEY};
             }
@@ -100,12 +104,12 @@ $(function () {
             const build_path = (...args) => {
                 return args.map((part, i) => {
                     if (i === 0) {
-                        return String(part).trim().replace(/[\/]*$/g, '')
+                        return String(part).trim().replace(/[\/]*$/g, '');
                     } else {
-                        return String(part).trim().replace(/(^[\/]*|[\/]*$)/g, '')
+                        return String(part).trim().replace(/(^[\/]*|[\/]*$)/g, '');
                     }
-                }).filter(x => x.length).join('/')
-            }
+                }).filter(x => x.length).join('/');
+            };
 
             const file = await self.queue.dequeue(item.id);
             const data = new FormData();
@@ -136,14 +140,14 @@ $(function () {
 
         function addItem(item, settings) {
             const node = self.item_template.content.firstElementChild.cloneNode(true);
-            // TODO lose this jankiness
+            // TODO lose this janky-ness
             const fields = {
                 id: 'field_id',
                 filename: 'field_filename',
                 tags: 'field_tags',
                 date: 'field_date',
                 comment: 'field_comment'
-            }
+            };
             for (const field in fields) {
                 if (settings[fields[field]] && item[settings[fields[field]]]) {
                     if (field === 'date') {
@@ -151,17 +155,17 @@ $(function () {
                     }
                     node.querySelector(`.${field}`).innerHTML += item[settings[fields[field]]];
                 } else {
-                    node.querySelector(`.${field}`).classList.add('hidden')
+                    node.querySelector(`.${field}`).classList.add('hidden');
                 }
             }
-            node.addEventListener('click', selectItem.bind(self, item, settings))
+            node.addEventListener('click', selectItem.bind(self, item, settings));
             return self.files_list.querySelector('ul').appendChild(node);
         }
 
         self.showDialog = async function (settings) {
             self.filesContent(self.files_loading);
 
-            $(self.dialog).modal('show')
+            $(self.dialog).modal('show');
             if (settings[KEY.pool_url]) {
                 const files = await self.queue.list();
                 self.files_list.querySelector('ul').innerHTML = null;
@@ -172,7 +176,7 @@ $(function () {
             } else {
                 self.filesContent(self.files_config);
             }
-        }
+        };
 
         /***************************************************************************************************************
          * Lifecycle event handlers
@@ -180,7 +184,7 @@ $(function () {
 
         self.onBoundTo = function (target, element) {
             self[BINDINGS[target]] = element;
-        }
+        };
 
         async function applySettings() {
             const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
@@ -204,7 +208,7 @@ $(function () {
             }
             // noinspection JSIgnoredPromiseFromCall
             applySettings();
-        }
+        };
     }
 
     OCTOPRINT_VIEWMODELS.push({
