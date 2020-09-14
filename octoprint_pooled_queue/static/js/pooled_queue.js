@@ -168,11 +168,15 @@ $(function () {
             $(self.dialog).modal('show');
             if (settings[KEY.pool_url]) {
                 const files = await self.queue.list();
-                self.files_list.querySelector('ul').innerHTML = null;
-                for (const item of files) {
-                    addItem(item, settings);
+                if (files.length > 0) {
+                    self.files_list.querySelector('ul').innerHTML = null;
+                    for (const item of files) {
+                        addItem(item, settings);
+                    }
+                    self.filesContent(self.files_list);
+                } else {
+                    self.filesContent(self.files_none);
                 }
-                self.filesContent(self.files_list);
             } else {
                 self.filesContent(self.files_config);
             }
