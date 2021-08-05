@@ -7,7 +7,7 @@ from octoprint.plugin import SettingsPlugin, TemplatePlugin, AssetPlugin, Reload
 class PooledQueuePlugin(SettingsPlugin,
 						TemplatePlugin,
 						AssetPlugin,
-						ReloadNeedingPlugin):
+						ReloadNeedingPlugin):  # FIXME seems to be showing up as a RestartNeedingPlugin?
 
 	# ~~ SettingsPlugin mixin
 
@@ -31,7 +31,7 @@ class PooledQueuePlugin(SettingsPlugin,
 
 			label_button_text="Queue",
 			label_dialog_title="Files Available in Queue",
-			label_dialog_instructions="Select a file from the pooled queue to upload to this printer&hellip;",
+			label_dialog_instructions="Choose a file from the pooled queue to upload to this printer&hellip;",
 
 			upload_path="local",
 			upload_include_comment=True,

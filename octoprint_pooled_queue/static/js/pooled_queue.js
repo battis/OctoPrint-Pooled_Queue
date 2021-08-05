@@ -14,18 +14,7 @@ $(function () {
     const PLUGIN_SELECTOR = `#plugin_${PLUGIN_ID}`;
     const BINDINGS = {
         [`${PLUGIN_SELECTOR}_button`]: 'button',
-        [`${PLUGIN_SELECTOR}_button_text`]: 'button_text',
-
         [`${PLUGIN_SELECTOR}_dialog`]: 'dialog',
-        [`${PLUGIN_SELECTOR}_dialog_title`]: 'dialog_title',
-        [`${PLUGIN_SELECTOR}_instructions`]: 'instructions',
-
-        [`${PLUGIN_SELECTOR}_files_none`]: 'files_none',
-        [`${PLUGIN_SELECTOR}_files_auth`]: 'files_auth',
-        [`${PLUGIN_SELECTOR}_files_config`]: 'files_config',
-        [`${PLUGIN_SELECTOR}_files_loading`]: 'files_loading',
-        [`${PLUGIN_SELECTOR}_files_list`]: 'files_list',
-
         [`${PLUGIN_SELECTOR}_item_template`]: 'item_template'
     };
 
@@ -36,6 +25,7 @@ $(function () {
         access_token_expiration: 'access_token_expiration',
         refresh_token: 'refresh_token',
         pool_url: 'pool_url',
+        queue_id: 'queue_id',
 
         field_id: 'field_id',
         field_filename: 'field_filename',
@@ -62,7 +52,7 @@ $(function () {
 
         self.dialog = undefined;
         self.dialog_title = undefined;
-        self.instructions = undefined;
+        self.dialog_instructions = undefined;
 
         self.files_none = undefined;
         self.files_config = undefined;
@@ -188,19 +178,32 @@ $(function () {
 
         self.onBoundTo = function (target, element) {
             self[BINDINGS[target]] = element;
+            if (target === `${PLUGIN_SELECTOR}_button`) {
+                self.button_text = element.querySelector(target + '_text');
+            } else if (target === `${PLUGIN_SELECTOR}_dialog`) {
+                self.dialog_title = element.querySelector(target + '_title');
+                self.dialog_instructions = element.querySelector(target + '_instructions');
+                self.files_none = element.querySelector(`${PLUGIN_SELECTOR}_files_none`);
+                self.files_config = element.querySelector(`${PLUGIN_SELECTOR}_files_config`);
+                self.files_auth = element.querySelector(`${PLUGIN_SELECTOR}_files_auth`)
+                self.files_loading = element.querySelector(`${PLUGIN_SELECTOR}_files_loading`);
+                self.files_list = element.querySelector(`${PLUGIN_SELECTOR}_files_list`);
+            }
         };
 
         async function applySettings() {
             const settings = await OctoPrint.settings.getPluginSettings(PLUGIN_ID);
+            console.log(self);
             self.button_text.innerHTML = settings[KEY.label_button_text];
-            self.instructions.innerHTML = settings[KEY.label_dialog_instructions];
+            self.dialog_instructions.innerHTML = settings[KEY.label_dialog_instructions];
             self.dialog_title.innerHTML = settings[KEY.label_dialog_title];
             self.button.addEventListener('click', self.showDialog.bind(self, settings));
             self.queue = new OctoPrintPool_Queue({
                 plugin_id: PLUGIN_ID,
                 pool_url: settings[KEY.pool_url],
                 client_id: settings[KEY.oauth2_client_id],
-                client_secret: settings[KEY.oauth2_client_secret]
+                client_secret: settings[KEY.oauth2_client_secret],
+                queue_id: settings[KEY.queue_id]
             });
         }
 
